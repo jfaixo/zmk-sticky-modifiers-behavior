@@ -53,23 +53,24 @@ static int on_sticky_modifiers_binding_pressed(struct zmk_behavior_binding *bind
     sticky_modifiers_state.modifiers_pressed |= modifier_bit;
     LOG_DBG("sticky modifier pressed: 0x%01X", sticky_modifiers_state.modifiers_pressed);
 
-    if (sticky_modifiers_state.normal_mode) {
-        LOG_DBG("normal mode modifier pressed: 0x%01X", sticky_modifiers_state.modifiers_pressed);
-        raise_zmk_keycode_state_changed_from_encoded(binding->param1, true, event.timestamp);
-    }
-    else if ((sticky_modifiers_state.modifiers_accumulated & modifier_bit) != 0) {
-        // Special case of modifier double tap. Entering normal mode
-        LOG_DBG("Entering normal mode");
-        sticky_modifiers_state.normal_mode = true;
-        sticky_modifiers_state.modifiers_accumulated = 0;
+    raise_zmk_keycode_state_changed_from_encoded(binding->param1, true, event.timestamp);
 
-        // Raise and lower the key a first time
-        raise_modifiers(modifier_bit, true, event.timestamp);
-        raise_modifiers(modifier_bit, false, event.timestamp);
-
-        // ...and raise it again
-        raise_modifiers(modifier_bit, true, event.timestamp);
-    }
+//    if (sticky_modifiers_state.normal_mode) {
+//        LOG_DBG("normal mode modifier pressed: 0x%01X", sticky_modifiers_state.modifiers_pressed);
+//    }
+//    else if ((sticky_modifiers_state.modifiers_accumulated & modifier_bit) != 0) {
+//        // Special case of modifier double tap. Entering normal mode
+//        LOG_DBG("Entering normal mode");
+//        sticky_modifiers_state.normal_mode = true;
+//        sticky_modifiers_state.modifiers_accumulated = 0;
+//
+//        // Raise and lower the key a first time
+//        raise_modifiers(modifier_bit, true, event.timestamp);
+//        raise_modifiers(modifier_bit, false, event.timestamp);
+//
+//        // ...and raise it again
+//        raise_modifiers(modifier_bit, true, event.timestamp);
+//    }
 
     return ZMK_BEHAVIOR_OPAQUE;
 }
@@ -80,10 +81,10 @@ static int on_sticky_modifiers_binding_released(struct zmk_behavior_binding *bin
     uint8_t modifier_bit = 1 << modifier_index;
     sticky_modifiers_state.modifiers_pressed ^= modifier_bit;
 
-    if (sticky_modifiers_state.normal_mode) {
-        raise_zmk_keycode_state_changed_from_encoded(binding->param1, false, event.timestamp);
-        LOG_DBG("normal mode modifier released: 0x%01X", sticky_modifiers_state.modifiers_pressed);
+    raise_zmk_keycode_state_changed_from_encoded(binding->param1, false, event.timestamp);
+    LOG_DBG("normal mode modifier released: 0x%01X", sticky_modifiers_state.modifiers_pressed);
 
+    if (sticky_modifiers_state.normal_mode) {
         if (sticky_modifiers_state.modifiers_pressed == 0) {
             LOG_DBG("Exiting normal mode");
             sticky_modifiers_state.normal_mode = false;
@@ -109,7 +110,7 @@ ZMK_SUBSCRIPTION(behavior_sticky_modifiers, zmk_keycode_state_changed);
 static int sticky_modifiers_keycode_state_changed_listener(const zmk_event_t *eh) {
     struct zmk_keycode_state_changed *ev = as_zmk_keycode_state_changed(eh);
 
-    if (ev == NULL || !ev->state) {
+    if (ev == NULL || !ev->state || is_mod(ev->usage_page, ev->keycode)) {
         return ZMK_EV_EVENT_BUBBLE;
     }
 
@@ -120,7 +121,7 @@ static int sticky_modifiers_keycode_state_changed_listener(const zmk_event_t *eh
         sticky_modifiers_state.modifiers_accumulated = 0;
 
         // Loop over currently held modifiers and press them
-        raise_modifiers(sticky_modifiers_state.modifiers_pressed, true, ev->timestamp);
+        //  raise_modifiers(sticky_modifiers_state.modifiers_pressed, true, ev->timestamp);
     }
     else if (sticky_modifiers_state.modifiers_accumulated != 0) {
         LOG_DBG("Trigger OSM behavior");
